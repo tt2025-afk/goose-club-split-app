@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鵝鵝俱樂部-分帳網頁</title>
+    <style>
+        /* [CSS 樣式...] */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        h1, h2 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 5px; margin-top: 25px; }
+        .container { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        input[type="text"], input[type="number"], select { padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; width: calc(100% - 22px); box-sizing: border-box; }
+        input[type="number"] { -moz-appearance: textfield; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; transition: background-color 0.3s; margin-right: 5px; }
+        button:hover { background-color: #0056b3; }
+        .member-action-btn, .expense-action-btn { padding: 5px 10px; margin-left: 10px; font-size: 0.8em; }
+        .edit-btn { background-color: #ffc107; color: #333; }
+        .edit-btn:hover { background-color: #e0a800; }
+        .delete-btn { background-color: #dc3545; }
+        .delete-btn:hover { background-color: #bd2130; }
+        #cancelEditBtn { background-color: #6c757d; }
+        #cancelEditBtn:hover { background-color: #5a6268; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #e9ecef; }
+        .net-positive { color: green; font-weight: bold; }
+        .net-negative { color: red; font-weight: bold; }
+        .split-checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+        .split-checkbox-group label { background-color: #eaf4ff; padding: 5px 10px; border-radius: 15px; cursor: pointer; }
+        .member-item { margin: 5px 0; padding: 5px 0; border-bottom: 1px dotted #ccc; display: flex; justify-content: space-between; align-items: center; }
+        #selectAllLabel { background-color: #28a745 !important; color: white; font-weight: bold; }
+        label[for="paidBy"] { display: block; margin-top: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🦢 鵝鵝俱樂部-分帳網頁</h1>
+
+    <section>
+        <h2>1. 成員設定</h2>
+        <input type="text" id="memberInput" placeholder="輸入成員名稱">
+        <button id="addMemberBtn">新增成員</button>
+        <h3>當前成員列表:</h3>
+        <div id="memberList"></div>
+        <p style="color: red; font-size: 0.9em; margin-top: 10px;">*刪除或編輯成員名稱將清空所有支出紀錄，請謹慎操作。</p>
+    </section>
+
+    <hr>
+
+    <section>
+        <h2>2. 記錄支出</h2>
+        <input type="text" id="expenseName" placeholder="支出說明 (例如: 晚餐)">
+        <input type="number" id="expenseAmount" placeholder="金額 (自動取整數)" min="0" step="1">
+        <label for="paidBy">付款人:</label>
+        <select id="paidBy"></select>
+        <h3>分攤成員:</h3>
+        <div id="splitMembersContainer" class="split-checkbox-group">
+            <p id="noMembersMsg" style="color: orange;">請先新增成員才能記錄支出！</p>
+        </div>
+        <button id="addExpenseBtn">記錄支出</button>
+        <button id="cancelEditBtn" style="display:none;">取消編輯</button>
+
+        <h3>支出歷史:</h3>
+        <table id="expenseTable">
+            <thead>
+                <tr>
+                    <th>說明</th>
+                    <th>金額</th>
+                    <th>付款人</th>
+                    <th>分攤人</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="expenseTbody"> 
+            </tbody>
+        </table>
+    </section>
+
+    <hr>
+
+    <section>
+        <h2>3. 結算結果與建議</h2>
+        <h3>成員淨額:</h3>
+        <table id="netTable">
+            <thead>
+                <tr>
+                    <th>成員</th>
+                    <th>淨額</th>
+                    <th>狀態</th>
+                </tr>
+            </thead>
+            <tbody id="netTbody">
+            </tbody>
+        </table>
+        <h3>轉帳建議 (最少次數):</h3>
+        <div id="settlementSuggestions">
+        </div>
+    </section>
+</div>
+
+<script>
+    // 核心數據結構 (使用預設成員)
+    let members = ["蘋果", "大哥", "小毛", "翔哥", "烏龜", "耀哥", "芋圓", "寧寧", "笨蛋"]; 
+    let expenses = []; 
+    let currentlyEditingIndex = null; 
+
+    // --- 1. 核心：初始化與事件綁定 ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // 綁定靜態按鈕
+        document.getElementById('addMemberBtn').addEventListener('click', addMember);
+        document.getElementById('addExpenseBtn').addEventListener('click', addExpense);
+        document.getElementById('cancelEditBtn').addEventListener('click', resetExpenseForm);
+
+        // 綁定動態列表 (使用事件委派)
+        document.getElementById('memberList').addEventListener('click', handleMemberActions);
+        document.getElementById('expenseTbody').addEventListener('click', handleExpenseActions);
+        document.getElementById('splitMembersContainer').addEventListener('change', handleSplitMemberChange);
+
+        // 頁面首次載入
+        updateUI();
+        calculateAndDisplaySettlement();
+    });
+
+    /**
+     * @description 更新所有介面
+     */
+    function updateUI() {
+        displayMemberList();
+        populatePaidBySelect();
+        populateSplitMembersCheckboxes(); 
+        displayExpenses();
+    }
+    
+    // --- 2. 成員管理 ---
+    function addMember() {
+        const input = document.getElementById('memberInput');
+        const name = input.value.trim();
+        if (name && !members.includes(name)) {
+            members.push(name); 
+            input.value = '';
+            updateUI(); 
+            calculateAndDisplaySettlement();
+        } else if (name) {
+            alert('成員名稱已存在或為空！');
+        }
+    }
+
+    function displayMemberList() {
+        const listDiv = document.getElementById('memberList');
+        listDiv.innerHTML = members.map((m, index) => `
+            <div class="member-item">
+                <span>${m}</span>
+                <div>
+                    <button class="member-action-btn edit-btn" data-action="edit" data-index="${index}" data-name="${m}">編輯</button>
+                    <button class="member-action-btn delete-btn" data-action="delete" data-index="${index}" data-name="${m}">刪除</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function handleMemberActions(event) {
+        const action = event.target.dataset.action;
+        const index = parseInt(event.target.dataset.index, 10);
+        const name = event.target.dataset.name;
+
+        if (action === 'edit') {
+            editMember(index, name);
+        } else if (action === 'delete') {
+            deleteMember(index, name);
+        }
+    }
+
+    function editMember(index, oldName) {
+        const newName = prompt(`請輸入 ${oldName} 的新名稱:`, oldName);
+        if (newName && newName.trim() !== oldName && !members.includes(newName.trim())) {
+            const confirmReset = confirm(`警告：編輯成員名稱 (${oldName} -> ${newName}) 會清除所有現有的支出紀錄以確保結算正確。是否繼續？`);
+            if (!confirmReset) return;
+            members[index] = newName.trim();
+            expenses = []; 
+            updateUI();
+            calculateAndDisplaySettlement();
+        } else if (newName) {
+            alert('名稱無變更、已被使用或為空！');
+        }
+    }
+
+    function deleteMember(index, nameToDelete) {
+        const confirmDelete = confirm(`警告：刪除成員 ${nameToDelete} 會清除所有現有的支出紀錄以確保結算正確。是否繼續？`);
+        if (confirmDelete) {
+            members.splice(index, 1);
+            expenses = []; 
+            updateUI();
+            calculateAndDisplaySettlement();
+        }
+    }
+
+    // --- 3. 支出記錄 (包含編輯/刪除) ---
+
+    function populatePaidBySelect() {
+        const select = document.getElementById('paidBy');
+        select.innerHTML = members.map(m => `<option value="${m}">${m}</option>`).join('');
+    }
+
+    function toggleAllSplitMembers(checked) {
+        document.querySelectorAll('input[name="splitMember"]').forEach(cb => {
+            if (cb.id !== 'selectAll') {
+                cb.checked = checked;
+            }
+        });
+        updateSelectAllCheckbox();
+    }
+
+    function populateSplitMembersCheckboxes() {
+        const container = document.getElementById('splitMembersContainer');
+        const noMembersMsg = document.getElementById('noMembersMsg');
+        if (members.length === 0) {
+            container.innerHTML = '';
+            noMembersMsg.style.display = 'block';
+            return;
+        }
+        noMembersMsg.style.display = 'none';
+        let checkboxesHtml = `
+            <label id="selectAllLabel">
+                <input type="checkbox" id="selectAll" data-action="toggleAll" checked> 
+                ✓ 勾選全部 / 取消全部
+            </label>
+        `;
+        checkboxesHtml += members.map(m => `
+            <label>
+                <input type="checkbox" name="splitMember" value="${m}" data-action="checkMember" checked> 
+                ${m}
+            </label>
+        `).join('');
+        container.innerHTML = checkboxesHtml;
+    }
+
+    function handleSplitMemberChange(event) {
+        const action = event.target.dataset.action;
+        if (action === 'toggleAll') {
+            toggleAllSplitMembers(event.target.checked);
+        } else if (action === 'checkMember') {
+            updateSelectAllCheckbox();
+        }
+    }
+
+    function updateSelectAllCheckbox() {
+        const allMemberCheckboxes = document.querySelectorAll('input[name="splitMember"]');
+        const checkedCount = Array.from(allMemberCheckboxes).filter(cb => cb.checked).length;
+        document.getElementById('selectAll').checked = checkedCount === allMemberCheckboxes.length;
+    }
+
+    function addExpense() {
+        if (members.length === 0) {
+            alert('請先新增成員才能記錄支出！');
+            return;
+        }
+        const name = document.getElementById('expenseName').value.trim();
+        
+        // *** 修正 2: 金額改為 "無條件捨去" (Math.floor) ***
+        const amount = Math.floor(parseFloat(document.getElementById('expenseAmount').value));
+        
+        const paidBy = document.getElementById('paidBy').value;
+        const splitCheckboxes = Array.from(document.querySelectorAll('input[name="splitMember"]:checked'))
+                                     .filter(cb => cb.id !== 'selectAll');
+        const splitAmong = splitCheckboxes.map(cb => cb.value);
+
+        if (!name || isNaN(amount) || amount <= 0 || !paidBy || splitAmong.length === 0) {
+            alert('請確認所有支出欄位都已正確填寫 (金額需 > 0)，且分攤成員至少有一位！');
+            return;
+        }
+        
+        const newExpense = { name, amount: amount, paidBy, splitAmong };
+
+        if (currentlyEditingIndex !== null) {
+            expenses[currentlyEditingIndex] = newExpense;
+        } else {
+            expenses.push(newExpense);
+        }
+
+        resetExpenseForm(); 
+        displayExpenses();
+        calculateAndDisplaySettlement();
+    }
+
+    function handleExpenseActions(event) {
+        const action = event.target.dataset.action;
+        const index = parseInt(event.target.dataset.index, 10);
+
+        if (action === 'edit') {
+            editExpense(index);
+        } else if (action === 'delete') {
+            deleteExpense(index);
+        }
+    }
+
+    function deleteExpense(index) {
+        const expenseName = expenses[index].name;
+        if (confirm(`確定要刪除這筆支出嗎？\n"${expenseName}"`)) {
+            expenses.splice(index, 1); 
+            displayExpenses();
+            calculateAndDisplaySettlement();
+        }
+    }
+
+    function editExpense(index) {
+        currentlyEditingIndex = index;
+        const exp = expenses[index];
+
+        document.getElementById('expenseName').value = exp.name;
+        document.getElementById('expenseAmount').value = exp.amount;
+        document.getElementById('paidBy').value = exp.paidBy;
+
+        document.querySelectorAll('input[name="splitMember"]').forEach(cb => {
+            cb.checked = exp.splitAmong.includes(cb.value);
+        });
+        updateSelectAllCheckbox(); 
+
+        document.getElementById('addExpenseBtn').innerText = '儲存變更';
+        document.getElementById('cancelEditBtn').style.display = 'inline-block';
+        
+        window.scrollTo(0, 0);
+        document.getElementById('expenseName').focus();
+    }
+    
+    function resetExpenseForm() {
+        currentlyEditingIndex = null; 
+        document.getElementById('expenseName').value = '';
+        document.getElementById('expenseAmount').value = '';
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+        
+        document.getElementById('addExpenseBtn').innerText = '記錄支出';
+        document.getElementById('cancelEditBtn').style.display = 'none';
+    }
+
+
+    function displayExpenses() {
+        const tbody = document.getElementById('expenseTbody');
+        
+        if (expenses.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">目前沒有支出紀錄。</td></tr>';
+        } else {
+            tbody.innerHTML = expenses.map((exp, index) => `
+                <tr>
+                    <td>${exp.name}</td>
+                    <td>$${exp.amount}</td> 
+                    <td>${exp.paidBy}</td>
+                    <td>${exp.splitAmong.join(', ')}</td>
+                    <td>
+                        <button class="expense-action-btn edit-btn" data-action="edit" data-index="${index}">編輯</button>
+                        <button class="expense-action-btn delete-btn" data-action="delete" data-index="${index}">刪除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    // --- 4. 結算計算邏輯 (核心) ---
+    /**
+     * @description 核心計算 (使用整數餘數分配法)
+     */
+    function calculateAndDisplaySettlement() {
+        const netTbody = document.getElementById('netTbody');
+        const suggestionsDiv = document.getElementById('settlementSuggestions');
+
+        if (members.length === 0) {
+            netTbody.innerHTML = '<tr><td colspan="3">請先新增成員。</td></tr>';
+            suggestionsDiv.innerHTML = '<p>請先新增成員並記錄支出。</p>';
+            return;
+        }
+        const netAmounts = {};
+        members.forEach(m => netAmounts[m] = 0);
+        
+        expenses.forEach(exp => {
+            const splitCount = exp.splitAmong.length;
+            if (splitCount === 0) return;
+
+            // *** 修正 4: 這是最公平的整數分帳法 ***
+            netAmounts[exp.paidBy] += exp.amount; // 1. 付款人獲得全額
+            
+            const baseShare = Math.floor(exp.amount / splitCount); // 2. 計算基本分攤
+            const remainder = exp.amount % splitCount; // 3. 計算餘數
+
+            // 4. 分配支出
+            exp.splitAmong.forEach((member, index) => {
+                let shareForThisPerson = baseShare;
+                if (index < remainder) {
+                    shareForThisPerson += 1; // 前 'remainder' 個人多付 $1
+                }
+                netAmounts[member] -= shareForThisPerson; // 扣除分攤
+            });
+        });
+
+        displayNetAmounts(netAmounts); 
+        calculateSettlements(netAmounts);
+    }
+
+    function displayNetAmounts(netAmounts) {
+        const tbody = document.getElementById('netTbody');
+        tbody.innerHTML = '';
+        members.forEach(member => {
+            // 修正 5: 淨額已經是整數，直接使用
+            const net = netAmounts[member] || 0; 
+            const statusClass = net > 0 ? 'net-positive' : (net < 0 ? 'net-negative' : '');
+            const statusText = net > 0 ? '應收' : (net < 0 ? '應付' : '結清');
+            const row = `
+                <tr>
+                    <td>${member}</td>
+                    <td class="${statusClass}">$${Math.abs(net)}</td> 
+                    <td>${statusText}</td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    }
+
+    function calculateSettlements(netAmounts) {
+        const suggestionsDiv = document.getElementById('settlementSuggestions');
+        
+        // 修正 6: 淨額已經是整數，直接過濾
+        const balances = Object.entries(netAmounts)
+            .filter(([, net]) => net !== 0) // 只保留非零淨額
+            .sort((a, b) => a[1] - b[1]); 
+
+        let i = 0; 
+        let j = balances.length - 1; 
+        const settlements = [];
+        
+        // 修正 7: 移除小數點比較邏輯，改用精確的整數
+        while (i < j) {
+            const debtor = balances[i][0];
+            let debtorNet = balances[i][1]; 
+            const creditor = balances[j][0];
+            let creditorNet = balances[j][1]; 
+
+            const amountToTransfer = Math.min(creditorNet, -debtorNet);
+
+            if (amountToTransfer > 0) {
+                settlements.push({ from: debtor, to: creditor, amount: amountToTransfer });
+            }
+            balances[i][1] += amountToTransfer; 
+            balances[j][1] -= amountToTransfer; 
+            
+            if (balances[i][1] === 0) { i++; }
+            if (balances[j][1] === 0) { j--; }
+        }
+        
+        if (settlements.length === 0 && members.length > 0) {
+            suggestionsDiv.innerHTML = '<p>🎉 所有成員皆已結清！</p>';
+        } else if (settlements.length === 0) {
+             suggestionsDiv.innerHTML = '<p>請先新增成員。</p>';
+        } else {
+            suggestionsDiv.innerHTML = settlements.map(s => 
+                // 修正 8: 顯示整數
+                `<p>👉 <strong>${s.from}</strong> 應該轉帳給 <strong>${s.to}</strong>：<span style="font-weight:bold; color:#d9534f;"> $${s.amount}</span></p>`
+            ).join('');
+        }
+    }
+</script>
+
+</body>
+</html>
