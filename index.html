@@ -7,8 +7,8 @@
     <style>
         :root {
             --primary-color: #4a90e2; /* 柔和藍 */
-            --accent-color: #50c878;  /* 翡翠綠 (複製按鈕) */
-            --danger-color: #ff6b6b;  /* 柔和紅 (刪除/負債) */
+            --accent-color: #50c878;  /* 翡翠綠 */
+            --danger-color: #ff6b6b;  /* 柔和紅 */
             --bg-color: #f4f7f9;
             --card-bg: #ffffff;
             --text-color: #333;
@@ -50,11 +50,8 @@
             transition: transform 0.2s;
         }
 
-        .card:hover {
-            transform: translateY(-2px);
-        }
+        .card:hover { transform: translateY(-2px); }
 
-        /* 輸入框樣式 */
         input[type="text"], input[type="number"], select {
             padding: 12px;
             margin: 8px 0;
@@ -75,18 +72,18 @@
         button {
             padding: 10px 20px;
             border: none;
-            border-radius: 30px; /* 膠囊狀按鈕 */
+            border-radius: 30px;
             cursor: pointer;
             font-weight: bold;
             transition: all 0.3s ease;
             margin-top: 10px;
             font-size: 0.95rem;
+            width: 100%;
         }
 
         #addMemberBtn, #addExpenseBtn {
             background-color: var(--primary-color);
             color: white;
-            width: 100%;
         }
         
         #addMemberBtn:hover, #addExpenseBtn:hover {
@@ -97,28 +94,12 @@
         #cancelEditBtn {
             background-color: #95a5a6;
             color: white;
-            width: 100%;
         }
 
-        /* 小按鈕 */
-        .member-action-btn, .expense-action-btn {
-            padding: 5px 12px;
-            margin-left: 5px;
-            font-size: 0.85rem;
-            border-radius: 6px;
-        }
-
-        .edit-btn { background-color: #f1c40f; color: #fff; }
-        .edit-btn:hover { background-color: #d4ac0d; }
-
-        .delete-btn { background-color: var(--danger-color); color: white; }
-        .delete-btn:hover { background-color: #e55050; }
-
-        /* 複製到 LINE 按鈕 */
+        /* 複製按鈕 */
         #copyToLineBtn {
-            background-color: #06c755; /* LINE 的綠色 */
+            background-color: #06c755; /* LINE 綠 */
             color: white;
-            width: 100%;
             font-size: 1.1rem;
             display: flex;
             align-items: center;
@@ -129,6 +110,21 @@
             background-color: #05b34c;
             box-shadow: 0 4px 12px rgba(6, 199, 85, 0.3);
         }
+
+        /* 小操作按鈕 */
+        .action-btn {
+            padding: 5px 12px;
+            margin-left: 5px;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            width: auto; /* 覆蓋全寬設定 */
+        }
+
+        .btn-edit { background-color: #f1c40f; color: #fff; }
+        .btn-edit:hover { background-color: #d4ac0d; }
+
+        .btn-del { background-color: var(--danger-color); color: white; }
+        .btn-del:hover { background-color: #e55050; }
 
         /* 表格樣式 */
         table {
@@ -147,20 +143,14 @@
             border-bottom: 1px solid #eee;
         }
 
-        th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-            color: #555;
-        }
-
+        th { background-color: #f8f9fa; font-weight: 600; color: #555; }
         tr:last-child td { border-bottom: none; }
-        tr:nth-child(even) { background-color: #fafbfc; } /* 斑馬紋 */
+        tr:nth-child(even) { background-color: #fafbfc; }
 
-        /* 狀態顏色 */
         .net-positive { color: #2ecc71; font-weight: bold; }
         .net-negative { color: var(--danger-color); font-weight: bold; }
 
-        /* Checkbox 樣式 */
+        /* Checkbox 樣式 (漂亮版) */
         .split-checkbox-group {
             display: flex;
             flex-wrap: wrap;
@@ -208,7 +198,6 @@
         }
         .member-item:last-child { border-bottom: none; }
 
-        /* 提示訊息 */
         .warning-text {
             color: #999;
             font-size: 0.85rem;
@@ -216,7 +205,6 @@
             margin-top: 10px;
         }
         
-        /* 結算建議區塊 */
         #settlementSuggestions {
             background-color: #fffbe6;
             border: 1px solid #ffe58f;
@@ -224,9 +212,15 @@
             border-radius: 8px;
             margin-top: 15px;
         }
-        #settlementSuggestions p {
-            margin: 5px 0;
-            font-size: 1rem;
+        #settlementSuggestions p { margin: 5px 0; font-size: 1rem; }
+        
+        #memberCountBadge {
+            background: #eee;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            color: #555;
+            float: right;
         }
     </style>
 </head>
@@ -243,7 +237,9 @@
         <button id="addMemberBtn">＋ 新增成員</button>
         
         <div style="margin-top: 20px;">
-            <h3 style="font-size: 1rem; color: #777; margin-bottom: 10px;">當前成員列表:</h3>
+            <h3 style="font-size: 1rem; color: #777; margin-bottom: 10px;">
+                當前成員列表 <span id="memberCountBadge">0 人</span>
+            </h3>
             <div id="memberList" style="border: 1px solid #eee; border-radius: 8px; padding: 5px;"></div>
         </div>
         <p class="warning-text">* 注意：刪除或編輯成員名稱將清空所有支出紀錄。</p>
@@ -266,9 +262,7 @@
         </div>
 
         <label style="font-weight:bold; display:block; margin-top:15px;">分給誰？</label>
-        <div id="splitMembersContainer" class="split-checkbox-group">
-            <p id="noMembersMsg" style="color: orange;">請先新增成員才能記錄支出！</p>
-        </div>
+        <div id="splitMembersContainer" class="split-checkbox-group"></div>
         
         <button id="addExpenseBtn">💾 記錄這筆支出</button>
         <button id="cancelEditBtn" style="display:none;">取消編輯</button>
@@ -285,8 +279,7 @@
                         <th style="width: 130px;">操作</th>
                     </tr>
                 </thead>
-                <tbody id="expenseTbody"> 
-                </tbody>
+                <tbody id="expenseTbody"></tbody>
             </table>
         </div>
     </div>
@@ -304,14 +297,12 @@
                         <th>狀態</th>
                     </tr>
                 </thead>
-                <tbody id="netTbody">
-                </tbody>
+                <tbody id="netTbody"></tbody>
             </table>
         </div>
 
         <h3 style="font-size: 1.1rem; margin-top: 30px;">💡 最佳轉帳建議</h3>
-        <div id="settlementSuggestions">
-        </div>
+        <div id="settlementSuggestions"></div>
 
         <button id="copyToLineBtn" style="margin-top: 20px;">
             📋 複製結果 (文字)
@@ -320,364 +311,324 @@
 </div>
 
 <script>
-    // 核心數據結構 (預設成員)
-    let members = ["蘋果", "大哥", "小毛", "翔哥", "烏龜", "耀哥", "芋圓", "寧寧", "笨蛋"]; 
-    let expenses = []; 
-    let currentlyEditingIndex = null; 
+    // --- 核心資料 ---
+    let allMembers = ["蘋果", "大哥", "小毛", "翔哥", "烏龜", "耀哥", "芋圓", "寧寧", "笨蛋"]; 
+    let allExpenses = []; 
+    let editingIndex = null; 
+    let currentSettlementText = []; // 用於複製
 
     // --- 初始化 ---
-    document.addEventListener('DOMContentLoaded', () => {
-        // 綁定按鈕
-        document.getElementById('addMemberBtn').addEventListener('click', addMember);
-        document.getElementById('addExpenseBtn').addEventListener('click', addExpense);
-        document.getElementById('cancelEditBtn').addEventListener('click', resetExpenseForm);
-        document.getElementById('copyToLineBtn').addEventListener('click', copyToLine);
-
-        // 事件委派 (處理動態生成的元素)
-        document.addEventListener('click', (event) => {
-            const target = event.target;
-            
-            // 成員操作
-            if (target.matches('[data-action="edit-member"]')) {
-                editMember(parseInt(target.dataset.index, 10), target.dataset.name);
-            } else if (target.matches('[data-action="delete-member"]')) {
-                deleteMember(parseInt(target.dataset.index, 10), target.dataset.name);
-            }
-
-            // 支出操作
-            else if (target.matches('[data-action="edit-expense"]')) {
-                editExpense(parseInt(target.dataset.index, 10));
-            } else if (target.matches('[data-action="delete-expense"]')) {
-                deleteExpense(parseInt(target.dataset.index, 10));
-            }
-        });
+    window.onload = function() {
+        // 綁定靜態按鈕
+        document.getElementById('addMemberBtn').onclick = addMember;
+        document.getElementById('addExpenseBtn').onclick = addExpense;
+        document.getElementById('cancelEditBtn').onclick = resetForm;
+        document.getElementById('copyToLineBtn').onclick = copyToLine;
         
-        // 監聽 Checkbox
-        document.addEventListener('change', (event) => {
-            const target = event.target;
-            if (target.matches('[data-action="toggleAll"]')) {
-                toggleAllSplitMembers(target.checked);
-            } else if (target.matches('[data-action="checkMember"]')) {
-                updateSelectAllCheckbox();
+        // 綁定全選/單選事件 (使用 Event Delegation 以支援動態更新)
+        document.getElementById('splitMembersContainer').onclick = function(e) {
+            // 因為美化版的 checkbox 被 label 包住，我們監聽 input 的點擊
+            if (e.target.tagName === 'INPUT') {
+                if (e.target.id === 'selectAll') {
+                    toggleAll(e.target.checked);
+                } else if (e.target.name === 'splitMember') {
+                    checkSelectAllStatus();
+                }
             }
-        });
+        };
 
-        // 初始載入
-        updateUI();
-        calculateAndDisplaySettlement();
-    });
+        renderAll(); // 首次渲染
+    };
 
-    // --- UI 更新 ---
-    function updateUI() {
-        displayMemberList();
-        populatePaidBySelect();
-        populateSplitMembersCheckboxes();
-        displayExpenses();
+    // --- 渲染總控 (Render All) ---
+    // 這是最關鍵的函式，每次資料變動都呼叫它，保證畫面跟資料 100% 同步
+    function renderAll() {
+        renderMembers();
+        renderPaidBySelect();
+        renderCheckboxes(); // 這裡會根據最新的 allMembers 重新畫勾選單
+        renderExpenses();
+        calculate();
     }
-    
-    // --- 成員管理 ---
-    function addMember() {
-        const input = document.getElementById('memberInput');
-        const name = input.value.trim();
-        if (name && !members.includes(name)) {
-            members.push(name); 
-            input.value = '';
-            updateUI(); 
-            calculateAndDisplaySettlement();
-        } else if (name) {
-            alert('成員名稱已存在或為空！');
+
+    // 1. 渲染成員列表
+    function renderMembers() {
+        const list = document.getElementById('memberList');
+        const badge = document.getElementById('memberCountBadge');
+        
+        badge.innerText = `共 ${allMembers.length} 人`;
+        
+        if (allMembers.length === 0) {
+            list.innerHTML = '<p style="text-align:center; color:#999;">暫無成員</p>';
+            return;
         }
-    }
 
-    function displayMemberList() {
-        const listDiv = document.getElementById('memberList');
-        listDiv.innerHTML = members.map((m, index) => `
+        list.innerHTML = allMembers.map((m, i) => `
             <div class="member-item">
                 <span style="font-weight:500;">${m}</span>
                 <div>
-                    <button class="member-action-btn edit-btn" data-action="edit-member" data-index="${index}" data-name="${m}">編輯</button>
-                    <button class="member-action-btn delete-btn" data-action="delete-member" data-index="${index}" data-name="${m}">刪除</button>
+                    <button class="action-btn btn-edit" onclick="editMember(${i})">修</button>
+                    <button class="action-btn btn-del" onclick="deleteMember(${i})">刪</button>
                 </div>
             </div>
         `).join('');
     }
 
-    function editMember(index, oldName) {
-        const newName = prompt(`請輸入 ${oldName} 的新名稱:`, oldName);
-        if (newName && newName.trim() !== oldName && !members.includes(newName.trim())) {
-            if (!confirm(`警告：編輯成員名稱將清除所有支出紀錄。是否繼續？`)) return;
-            members[index] = newName.trim();
-            expenses = []; 
-            updateUI();
-            calculateAndDisplaySettlement();
-        }
-    }
-
-    function deleteMember(index, nameToDelete) {
-        if (confirm(`警告：刪除成員 ${nameToDelete} 會清除所有支出紀錄。是否繼續？`)) {
-            members.splice(index, 1);
-            expenses = []; 
-            updateUI();
-            calculateAndDisplaySettlement();
-        }
-    }
-
-    // --- 支出管理 ---
-    function populatePaidBySelect() {
-        const select = document.getElementById('paidBy');
-        select.innerHTML = members.map(m => `<option value="${m}">${m}</option>`).join('');
-    }
-
-    function populateSplitMembersCheckboxes() {
+    // 2. 渲染分攤勾選單 (包含美化樣式)
+    function renderCheckboxes() {
         const container = document.getElementById('splitMembersContainer');
-        const noMembersMsg = document.getElementById('noMembersMsg');
-        
-        if (members.length === 0) {
-            container.innerHTML = '';
-            noMembersMsg.style.display = 'block';
+        container.innerHTML = ''; // 強制清空
+
+        if (allMembers.length === 0) {
+            container.innerHTML = '<p style="color:orange; padding:5px;">請先新增成員！</p>';
             return;
         }
-        noMembersMsg.style.display = 'none';
-        
-        let checkboxesHtml = `
+
+        let html = `
             <label id="selectAllLabel">
-                <input type="checkbox" id="selectAll" data-action="toggleAll" checked> 
-                全選
+                <input type="checkbox" id="selectAll" checked> 全選
             </label>
         `;
-        checkboxesHtml += members.map(m => `
+        
+        html += allMembers.map(m => `
             <label>
-                <input type="checkbox" name="splitMember" value="${m}" data-action="checkMember" checked> 
-                ${m}
+                <input type="checkbox" name="splitMember" value="${m}" checked> ${m}
             </label>
         `).join('');
-        container.innerHTML = checkboxesHtml;
+
+        container.innerHTML = html;
     }
 
-    function toggleAllSplitMembers(checked) {
-        document.querySelectorAll('input[name="splitMember"]').forEach(cb => cb.checked = checked);
-        updateSelectAllCheckbox();
+    // 3. 渲染付款人下拉
+    function renderPaidBySelect() {
+        const sel = document.getElementById('paidBy');
+        sel.innerHTML = allMembers.map(m => `<option value="${m}">${m}</option>`).join('');
     }
 
-    function updateSelectAllCheckbox() {
-        const all = document.querySelectorAll('input[name="splitMember"]');
-        const checked = Array.from(all).filter(cb => cb.checked).length;
-        const selectAllCb = document.getElementById('selectAll');
-        if(selectAllCb) selectAllCb.checked = (checked === all.length && all.length > 0);
+    // 4. 渲染支出表
+    function renderExpenses() {
+        const tbody = document.getElementById('expenseTbody');
+        if (allExpenses.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">目前沒有支出紀錄 🍃</td></tr>';
+            return;
+        }
+        tbody.innerHTML = allExpenses.map((e, i) => `
+            <tr>
+                <td>${e.name}</td>
+                <td style="font-weight:bold;">$${e.amount}</td>
+                <td>${e.payer}</td>
+                <td style="font-size:0.85rem; color:#666;">${e.splitList.length}人分: ${e.splitList.join(', ')}</td>
+                <td>
+                    <button class="action-btn btn-edit" onclick="editExpense(${i})">修</button>
+                    <button class="action-btn btn-del" onclick="deleteExpense(${i})">刪</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // --- 邏輯功能 ---
+
+    function addMember() {
+        const val = document.getElementById('memberInput').value.trim();
+        if (!val) return alert('請輸入名字');
+        if (allMembers.includes(val)) return alert('名字重複了');
+        
+        allMembers.push(val);
+        document.getElementById('memberInput').value = '';
+        renderAll(); // 更新介面 (包含勾選單)
+    }
+
+    function deleteMember(index) {
+        const name = allMembers[index];
+        if (!confirm(`確定刪除 "${name}" 嗎？\n(注意：這會清空目前的所有支出紀錄)`)) return;
+        
+        allMembers.splice(index, 1);
+        allExpenses = []; // 清空支出以保證正確
+        resetForm();
+        renderAll(); // *** 關鍵：這裡會觸發 renderCheckboxes，移除該成員 ***
+    }
+
+    function editMember(index) {
+        const oldName = allMembers[index];
+        const newName = prompt('修改名字:', oldName);
+        if (!newName || newName === oldName) return;
+        if (allMembers.includes(newName)) return alert('名字重複');
+        
+        if (!confirm('修改名字會清空支出紀錄，確定嗎？')) return;
+        
+        allMembers[index] = newName;
+        allExpenses = [];
+        renderAll();
     }
 
     function addExpense() {
-        if (members.length === 0) { alert('請先新增成員！'); return; }
+        if (allMembers.length === 0) return alert('沒成員');
         
         const name = document.getElementById('expenseName').value.trim();
-        const amount = Math.floor(parseFloat(document.getElementById('expenseAmount').value)); // 整數
-        const paidBy = document.getElementById('paidBy').value;
-        const splitCheckboxes = Array.from(document.querySelectorAll('input[name="splitMember"]:checked'))
-                                     .filter(cb => cb.id !== 'selectAll');
-        const splitAmong = splitCheckboxes.map(cb => cb.value);
-
-        if (!name || isNaN(amount) || amount <= 0 || !paidBy || splitAmong.length === 0) {
-            alert('請確認資料完整 (金額需 > 0)，且至少有一人分攤！');
-            return;
-        }
+        const amount = Math.floor(parseFloat(document.getElementById('expenseAmount').value));
+        const payer = document.getElementById('paidBy').value;
         
-        const newExpense = { name, amount, paidBy, splitAmong };
+        const checkedBoxes = document.querySelectorAll('input[name="splitMember"]:checked');
+        const splitList = Array.from(checkedBoxes).map(cb => cb.value);
 
-        if (currentlyEditingIndex !== null) {
-            expenses[currentlyEditingIndex] = newExpense;
-        } else {
-            expenses.push(newExpense);
+        if (!name || isNaN(amount) || amount <= 0 || !payer || splitList.length === 0) {
+            return alert('資料不完整 (金額需>0，且至少勾選一人)');
         }
 
-        resetExpenseForm(); 
-        displayExpenses();
-        calculateAndDisplaySettlement();
+        const record = { name, amount, payer, splitList };
+
+        if (editingIndex !== null) {
+            allExpenses[editingIndex] = record;
+        } else {
+            allExpenses.push(record);
+        }
+
+        resetForm();
+        renderAll();
     }
 
     function deleteExpense(index) {
-        if (confirm(`確定要刪除 "${expenses[index].name}" 嗎？`)) {
-            expenses.splice(index, 1); 
-            displayExpenses();
-            calculateAndDisplaySettlement();
-        }
+        if (!confirm('刪除此筆支出？')) return;
+        allExpenses.splice(index, 1);
+        renderAll();
     }
 
     function editExpense(index) {
-        currentlyEditingIndex = index;
-        const exp = expenses[index];
+        editingIndex = index;
+        const exp = allExpenses[index];
+        
         document.getElementById('expenseName').value = exp.name;
         document.getElementById('expenseAmount').value = exp.amount;
-        document.getElementById('paidBy').value = exp.paidBy;
-
-        const checkboxes = document.querySelectorAll('input[name="splitMember"]');
-        checkboxes.forEach(cb => cb.checked = exp.splitAmong.includes(cb.value));
-        updateSelectAllCheckbox();
+        document.getElementById('paidBy').value = exp.payer;
+        
+        // 恢復勾選狀態
+        const boxes = document.querySelectorAll('input[name="splitMember"]');
+        boxes.forEach(box => {
+            box.checked = exp.splitList.includes(box.value);
+        });
+        checkSelectAllStatus();
 
         document.getElementById('addExpenseBtn').innerText = '💾 儲存變更';
         document.getElementById('cancelEditBtn').style.display = 'inline-block';
         document.getElementById('expenseName').focus();
     }
-    
-    function resetExpenseForm() {
-        currentlyEditingIndex = null; 
+
+    function resetForm() {
+        editingIndex = null;
         document.getElementById('expenseName').value = '';
         document.getElementById('expenseAmount').value = '';
-        
-        // 恢復全選
-        const checkboxes = document.querySelectorAll('input[name="splitMember"]');
-        checkboxes.forEach(cb => cb.checked = true);
-        updateSelectAllCheckbox();
-
         document.getElementById('addExpenseBtn').innerText = '💾 記錄這筆支出';
         document.getElementById('cancelEditBtn').style.display = 'none';
-    }
-
-    function displayExpenses() {
-        const tbody = document.getElementById('expenseTbody');
-        if (expenses.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999; padding: 20px;">目前沒有支出紀錄 🍃</td></tr>';
-        } else {
-            tbody.innerHTML = expenses.map((exp, index) => `
-                <tr>
-                    <td>${exp.name}</td>
-                    <td style="font-weight:bold;">$${exp.amount}</td>
-                    <td>${exp.paidBy}</td>
-                    <td style="font-size:0.85rem; color:#666;">${exp.splitAmong.length}人分: ${exp.splitAmong.join(', ')}</td>
-                    <td>
-                        <button class="expense-action-btn edit-btn" data-action="edit-expense" data-index="${index}">修</button>
-                        <button class="expense-action-btn delete-btn" data-action="delete-expense" data-index="${index}">刪</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-    }
-
-    // --- 核心計算 ---
-    function calculateAndDisplaySettlement() {
-        const netAmounts = {};
-        members.forEach(m => netAmounts[m] = 0);
         
-        expenses.forEach(exp => {
-            const splitCount = exp.splitAmong.length;
-            if (splitCount === 0) return;
-            
-            // 整數公平分帳
-            netAmounts[exp.paidBy] += exp.amount;
-            const baseShare = Math.floor(exp.amount / splitCount);
-            const remainder = exp.amount % splitCount;
+        // 預設全選
+        toggleAll(true);
+    }
 
-            exp.splitAmong.forEach((member, index) => {
-                let share = baseShare + (index < remainder ? 1 : 0);
-                netAmounts[member] -= share;
+    // Checkbox 輔助
+    function toggleAll(checked) {
+        document.querySelectorAll('input[name="splitMember"]').forEach(cb => cb.checked = checked);
+        const selectAll = document.getElementById('selectAll');
+        if(selectAll) selectAll.checked = checked;
+    }
+    
+    function checkSelectAllStatus() {
+        const all = document.querySelectorAll('input[name="splitMember"]');
+        const checked = document.querySelectorAll('input[name="splitMember"]:checked');
+        const selectAll = document.getElementById('selectAll');
+        if(selectAll) selectAll.checked = (all.length > 0 && all.length === checked.length);
+    }
+
+    // --- 計算核心 (整數) ---
+    function calculate() {
+        const net = {};
+        allMembers.forEach(m => net[m] = 0);
+
+        allExpenses.forEach(e => {
+            const count = e.splitList.length;
+            if (count === 0) return;
+            
+            net[e.payer] += e.amount;
+            
+            const base = Math.floor(e.amount / count);
+            const remainder = e.amount % count;
+            
+            e.splitList.forEach((m, i) => {
+                const share = base + (i < remainder ? 1 : 0);
+                net[m] -= share;
             });
         });
 
-        displayNetAmounts(netAmounts); 
-        return calculateSettlements(netAmounts); // 回傳結果供複製使用
+        renderNetTable(net);
+        renderSuggestions(net);
     }
 
-    function displayNetAmounts(netAmounts) {
+    function renderNetTable(net) {
         const tbody = document.getElementById('netTbody');
-        tbody.innerHTML = '';
-        
-        if (members.length === 0) {
+        if (allMembers.length === 0) {
              tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">請先新增成員</td></tr>';
              return;
         }
-
-        members.forEach(member => {
-            const net = netAmounts[member];
-            const statusClass = net > 0 ? 'net-positive' : (net < 0 ? 'net-negative' : '');
-            const statusText = net > 0 ? '應收' : (net < 0 ? '應付' : '結清');
-            const row = `
+        tbody.innerHTML = allMembers.map(m => {
+            const val = net[m];
+            const color = val > 0 ? '#2ecc71' : (val < 0 ? '#ff6b6b' : '#333');
+            const status = val > 0 ? '應收' : (val < 0 ? '應付' : '結清');
+            return `
                 <tr>
-                    <td>${member}</td>
-                    <td class="${statusClass}">$${Math.abs(net)}</td> 
-                    <td>${statusText}</td>
+                    <td>${m}</td>
+                    <td style="color:${color}; font-weight:bold;">$${Math.abs(val)}</td>
+                    <td>${status}</td>
                 </tr>
             `;
-            tbody.innerHTML += row;
-        });
+        }).join('');
     }
 
-    function calculateSettlements(netAmounts) {
-        const suggestionsDiv = document.getElementById('settlementSuggestions');
-        const balances = Object.entries(netAmounts)
-            .filter(([, net]) => net !== 0)
-            .sort((a, b) => a[1] - b[1]); 
-
-        let i = 0; 
-        let j = balances.length - 1; 
-        const settlements = [];
+    function renderSuggestions(net) {
+        const div = document.getElementById('settlementSuggestions');
         
-        while (i < j) {
-            const debtor = balances[i][0];
-            const creditor = balances[j][0]; 
-            const amount = Math.min(balances[j][1], -balances[i][1]);
+        let balances = Object.entries(net).filter(x => x[1] !== 0).sort((a,b) => a[1] - b[1]);
+        let html = '';
+        let i = 0; 
+        let j = balances.length - 1;
+        
+        currentSettlementText = []; // 清空複製文字
 
-            if (amount > 0) settlements.push({ from: debtor, to: creditor, amount: amount });
+        while (i < j) {
+            const debtor = balances[i];
+            const creditor = balances[j];
+            const amount = Math.min(Math.abs(debtor[1]), creditor[1]);
             
-            balances[i][1] += amount; 
-            balances[j][1] -= amount; 
+            if (amount > 0) {
+                html += `<p>👉 <b>${debtor[0]}</b> 給 <b>${creditor[0]}</b>: <span style="color:#e55050; font-weight:bold;">$${amount}</span></p>`;
+                currentSettlementText.push(`${debtor[0]} 給 ${creditor[0]}: $${amount}`);
+            }
+
+            balances[i][1] += amount;
+            balances[j][1] -= amount;
             
             if (balances[i][1] === 0) i++;
             if (balances[j][1] === 0) j--;
         }
-        
-        if (settlements.length === 0) {
-            const msg = (members.length > 0 && expenses.length > 0) ? '🎉 大家都結清囉！' : '尚無資料';
-            suggestionsDiv.innerHTML = `<p style="text-align:center; color:#2ecc71; font-weight:bold;">${msg}</p>`;
-            return [];
-        } else {
-            suggestionsDiv.innerHTML = settlements.map(s => 
-                `<p>👉 <strong>${s.from}</strong> 給 <strong>${s.to}</strong>： <span style="color:#e55050; font-weight:bold;">$${s.amount}</span></p>`
-            ).join('');
-            return settlements;
-        }
+
+        if (!html) html = '<p style="text-align:center; color:#2ecc71; font-weight:bold;">🎉 全數結清！</p>';
+        div.innerHTML = html;
     }
 
-    // --- 複製到 LINE ---
     function copyToLine() {
-        // 重新計算以獲取最新數據
-        const netAmounts = {};
-        members.forEach(m => netAmounts[m] = 0);
-        expenses.forEach(exp => {
-            const splitCount = exp.splitAmong.length;
-            if (splitCount === 0) return;
-            netAmounts[exp.paidBy] += exp.amount;
-            const baseShare = Math.floor(exp.amount / splitCount);
-            const remainder = exp.amount % splitCount;
-            exp.splitAmong.forEach((member, index) => {
-                let share = baseShare + (index < remainder ? 1 : 0);
-                netAmounts[member] -= share;
-            });
-        });
-
-        const settlements = calculateSettlements(netAmounts); // 取得轉帳列表
-        
-        // 產生文字
-        let text = "🦢 鵝鵝俱樂部 - 分帳結果\n";
-        text += "====================\n\n";
-        
-        if (settlements.length === 0) {
-            text += "🎉 目前沒有需要轉帳的款項！\n";
-        } else {
-            settlements.forEach(s => {
-                text += `👉 ${s.from} 給 ${s.to}: $${s.amount}\n`;
-            });
-            text += "\n💰 記得轉帳喔！\n";
+        if (currentSettlementText.length === 0) {
+            // 檢查是否真的結清，還是只是沒資料
+            if (allExpenses.length > 0) return alert('🎉 大家都結清囉！不用轉帳。');
+            return alert('目前沒有資料可以複製喔');
         }
         
-        text += "\n====================\n";
-        text += `共 ${expenses.length} 筆支出紀錄`;
-
-        // 執行複製
-        navigator.clipboard.writeText(text).then(() => {
-            alert("✅ 已複製結果！\n請直接到 LINE 貼上即可。");
-        }).catch(err => {
-            console.error('複製失敗:', err);
-            alert("❌ 複製失敗，請手動複製。");
-        });
+        let text = "🦢 鵝鵝俱樂部 - 分帳結果\n";
+        text += "====================\n\n";
+        text += currentSettlementText.join('\n');
+        text += "\n\n💰 記得轉帳喔！\n";
+        text += "====================\n";
+        text += `共 ${allExpenses.length} 筆支出紀錄`;
+        
+        navigator.clipboard.writeText(text)
+            .then(() => alert('✅ 已複製結果！請到 LINE 貼上。'))
+            .catch(() => alert('❌ 複製失敗，請手動複製。'));
     }
 </script>
 
